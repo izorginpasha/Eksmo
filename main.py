@@ -70,3 +70,4 @@ for event in events:
 final = voice.overlay(fx_track)
 final.export("result.wav", format="wav")
 print("✅ Готово: result.wav")
+print(segments )
