@@ -4,11 +4,27 @@ def save_events_to_excel(events, output_path="events.xlsx"):
     if not events:
         print("⚠️ Нет событий для сохранения.")
         return
+
     df = pd.DataFrame(events)
-    df["time_sec"] = df["position"] / 1000
-    df = df[["text", "sound", "position", "time_sec"]]
+
+    # Автоматические поля
+    df["start_sec"] = df["start"]
+    df["duration_sec"] = df["duration"]
+    df["end_sec"] = df["start"] + df["duration"]
+    df["start_ms"] = (df["start"] * 1000).astype(int)
+    df["duration_ms"] = (df["duration"] * 1000).astype(int)
+    df["volume_db"] = df["volume"]
+
+    # Упорядочиваем колонки
+    df = df[[
+        "text", "sound",
+        "start_sec", "duration_sec", "end_sec",
+        "start_ms", "duration_ms", "volume_db"
+    ]]
+
     df.to_excel(output_path, index=False)
     print(f"✅ События сохранены в {output_path}")
+
 
 def mitation_acting():
     #-------------Имитация озвучки диктора - -------

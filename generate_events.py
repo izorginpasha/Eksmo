@@ -3,16 +3,26 @@ import requests
 from pathlib import Path
 import pandas as pd
 from pydub import AudioSegment
-
+from utilities.utilities import save_events_to_excel
 # Загружаем модель
-model = whisper.load_model("base")
+model = whisper.load_model("medium")
 
 def get_sfx_from_ollama(text_segment):
     prompt = f"""
-    Ты — звуковой дизайнер.
-    На основе текста подбери только список звуковых эффектов. Верни строго список строк в формате Python, без пояснений.
-    Пример ответа: ["sound1.wav", "sound2.wav"]
-    Текст: "{text_segment}"
+    Ты — звуковой дизайнер. Проанализируй текст и верни список звуковых эффектов с их параметрами.
+    Формат строго такой:
+
+    [
+      {{
+        "sound": "название.wav",
+        "start": 1.5,
+        "duration": 2.0,
+        "volume": -5
+      }},
+      ...
+    ]
+
+    Только JSON, никаких пояснений. Текст: \"\"\"{text_segment}\"\"\"
     """
     try:
         response = requests.post(
@@ -31,15 +41,7 @@ def get_sfx_from_ollama(text_segment):
         print("❌ Ошибка Ollama:", e)
         return []
 
-def save_events_to_excel(events, output_path="events.xlsx"):
-    if not events:
-        print("⚠️ Нет событий для сохранения.")
-        return
-    df = pd.DataFrame(events)
-    df["time_sec"] = df["position"] / 1000
-    df = df[["text", "sound", "position", "time_sec"]]
-    df.to_excel(output_path, index=False)
-    print(f"✅ События сохранены в {output_path}")
+
 
 def main():
     audio_path = "audio/voice.mp3"
@@ -51,11 +53,13 @@ def main():
         print(f"🗣️ Сегмент: {seg['text']}")
         sfx_list = get_sfx_from_ollama(seg['text'])
         print(f"🎵 Найдено эффектов: {sfx_list}")
-        for sound_file in sfx_list:
+        for sfx in sfx_list:
             events.append({
                 "text": seg['text'],
-                "sound": sound_file,
-                "position": int(seg['start'] * 1000)
+                "sound": sfx["sound"],
+                "start": float(sfx["start"]),
+                "duration": float(sfx["duration"]),
+                "volume": float(sfx["volume"])
             })
 
     save_events_to_excel(events)
