@@ -7,15 +7,16 @@ def save_events_to_excel(events, output_path="events.xlsx"):
 
     df = pd.DataFrame(events)
 
-    # Автоматические поля
+    # Вычисляем длительность и технические поля
     df["start_sec"] = df["start"]
-    df["duration_sec"] = df["duration"]
-    df["end_sec"] = df["start"] + df["duration"]
-    df["start_ms"] = (df["start"] * 1000).astype(int)
-    df["duration_ms"] = (df["duration"] * 1000).astype(int)
+    df["end_sec"] = df["end"]
+    df["duration_sec"] = df["end"] - df["start"]
+
+    df["start_ms"] = (df["start_sec"] * 1000).astype(int)
+    df["duration_ms"] = (df["duration_sec"] * 1000).astype(int)
     df["volume_db"] = df["volume"]
 
-    # Упорядочиваем колонки
+    # Упорядочиваем столбцы для читаемости
     df = df[[
         "text", "sound",
         "start_sec", "duration_sec", "end_sec",

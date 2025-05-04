@@ -9,21 +9,29 @@ from utilities.utilities import save_events_to_excel
 model = whisper.load_model("medium")
 
 def get_sfx_from_ollama(text_segment):
+    fx_dir = Path("audio/fx")
+    available_sounds = {p.name for p in fx_dir.glob("*.wav")}
+    sound_list = "\n".join(f'- {s}' for s in sorted(available_sounds))
     prompt = f"""
-Ты — звуковой дизайнер. Проанализируй текст и верни список звуковых эффектов с их параметрами.
-Формат строго такой:
+    Ты — звуковой дизайнер. У тебя есть список доступных звуковых эффектов:
 
-[
-  {{
-    "sound": "название.wav",
-    "start": 1.5,
-    "duration": 2.0,
-    "volume": -5
-  }}
-]
+    {sound_list}
 
-Только JSON, никаких пояснений. Текст: \"\"\"{text_segment}\"\"\"
-"""
+    Проанализируй текст и определи, какие звуковые эффекты подойдут.
+    Если подходящий звук уже есть в списке — используй его.
+    Если в списке нет нужного — придумай новое имя в формате `название.wav`.
+
+    Формат ответа строго такой:
+
+    [
+      {{
+        "sound": "название.wav",
+        "volume": -5
+      }}
+    ]
+
+    Только JSON. Без пояснений. Текст: \"\"\"{text_segment}\"\"\"
+    """
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
@@ -40,54 +48,22 @@ def get_sfx_from_ollama(text_segment):
         print("❌ Ошибка Ollama:", e)
         return []
 
-def merge_segments(segments, max_duration=10.0):
-    """Объединяет сегменты whisper в блоки до max_duration секунд"""
-    merged = []
-    buffer = []
-    buffer_start = None
-
-    for seg in segments:
-        if not buffer:
-            buffer_start = seg['start']
-        buffer.append(seg)
-
-        total_duration = seg['end'] - buffer_start
-        if total_duration >= max_duration:
-            merged.append({
-                "start": buffer_start,
-                "end": seg['end'],
-                "text": " ".join(s['text'] for s in buffer)
-            })
-            buffer = []
-
-    if buffer:
-        merged.append({
-            "start": buffer_start,
-            "end": buffer[-1]['end'],
-            "text": " ".join(s['text'] for s in buffer)
-        })
-
-    return merged
-
 def main():
     audio_path = "audio/voice.mp3"
     result = model.transcribe(audio_path, language="ru", verbose=False)
     segments = result["segments"]
 
-    # 🔁 Объединяем сегменты по 10 секунд
-    merged_segments = merge_segments(segments, max_duration=10.0)
-
     events = []
-    for seg in merged_segments:
-        print(f"🗣️ Сегмент (объединённый): {seg['text']}")
+    for seg in segments:
+        print(f"🗣️ Сегмент: {seg['text']}")
         sfx_list = get_sfx_from_ollama(seg['text'])
         print(f"🎵 Найдено эффектов: {sfx_list}")
         for sfx in sfx_list:
             events.append({
-                "text": seg['text'],
+                "start": seg["start"],
+                "end": seg["end"],
+                "text": seg["text"],
                 "sound": sfx["sound"],
-                "start": seg["start"] + float(sfx["start"]),  # смещение внутри объединённого блока
-                "duration": float(sfx["duration"]),
                 "volume": float(sfx["volume"])
             })
 
