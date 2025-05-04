@@ -11,7 +11,7 @@ def generate_synthetic_sound(fx_path: Path):
 
     # Псевдо-уникальные параметры
     freq = 200 + (hash_val % 800)        # частота: 200–1000 Гц
-    dur = 300 + (hash_val % 1000)        # длительность: 300–1300 мс
+    dur = 5000 + (hash_val % 1000)        # длительность: 300–1300 мс
     is_noise = "noise" in name or "wind" in name or "static" in name
 
     if is_noise:
@@ -60,25 +60,22 @@ def mix_effects(audio_path, fx_dir, events_path="events.xlsx", output_path="resu
 
         if not fx_path.exists():
             print(f"⚠️ [{index}] Файл не найден: {fx_path}")
-            fx_path = generate_synthetic_sound(fx_path)
+            # fx_path = generate_synthetic_sound(fx_path)
             if not fx_path or not fx_path.exists():
                 continue  # пропускаем, если не удалось сгенерировать
 
         try:
             fx = AudioSegment.from_wav(fx_path)
             fx_duration = int(row["duration_ms"])
+            if len(fx) > fx_duration:
+                fx = fx[:fx_duration]
 
-            if len(fx) < fx_duration:
-                print(f"⚠️ [{index}] Эффект {fx_path.name} короче нужного: {len(fx)} мс < {fx_duration} мс")
-                continue
-
-            fx = fx[:fx_duration]
             fx += float(row["volume_db"])
             fx = fx.fade_in(300).fade_out(500)
 
             start_ms = int(row["start_ms"])
             fx_track = fx_track.overlay(fx, position=start_ms)
-            print(f"✅ [{index}] {fx_path.name} → {start_ms} мс | {fx_duration} мс | {row['volume_db']} dB")
+            print(f"✅ [{index}] {fx_path.name} → {start_ms} мс | {len(fx)} мс | dB")
             applied += 1
 
         except Exception as e:
