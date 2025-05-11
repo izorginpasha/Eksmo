@@ -16,3 +16,4 @@ __pycache__/
 # исключаем dockerFail
 #.docker-compose.yml
 celerybeat-schedule.dat
+audio.zip

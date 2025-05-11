@@ -1,3 +1,4 @@
+
 import whisper
 import spacy
 from gtts import gTTS
@@ -6,71 +7,81 @@ from pydub.playback import play
 from pydub.effects import normalize
 import os
 from pathlib import Path
+import requests
+from utilities.utilities import save_events_to_excel, mitation_acting
 
 # Загружаем модель распознавания речи
 model = whisper.load_model("base")
-nlp = spacy.load("ru_core_news_sm")
+#-------------Имитация озвучки диктора - -------
+#mitation_acting()
 
-#-------------Имитация озвучки диктора--------
-# Путь к тексту
-# with open("text_file/text.txt", "r", encoding="utf-8") as f:
-#     text = f.read()
 
-# Озвучка текста через gTTS
-# tts = gTTS(text, lang='ru')
-# tts.save("audio/voice.mp3")
 # ---------------------------------------------
+# 🔁 Функция запроса в LLM
+def get_sfx_from_ollama(text_segment):
+    prompt = f"""
+    Ты — звуковой дизайнер.
 
+    На основе текста подбери только список звуковых эффектов. Верни строго список строк в формате Python, без пояснений.
 
+    Пример ответа:
+    ["sound1.wav", "sound2.wav"]
 
+    Текст: "{text_segment}"
+    """
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "llama3", "prompt": prompt, "stream": False}
+        )
+        result = response.json()['response']
+        print("📤 Ответ от Ollama:", repr(result))
+        return eval(result.strip()) if result.strip().startswith("[") else []
 
-# ------------Пути
-voice_path = "audio/voice.mp3"
-text_path = "text_file/text.txt"
-fx_dir = Path("audio/fx")
-output_path = "result.wav"
+    except Exception as e:
+        print("❌ Ошибка Ollama:", e)
+        return []
 
-# Шаг 1. Распознаём текст (или берём из файла)
-with open(text_path, "r", encoding="utf-8") as f:
-    text = f.read()
+# 🎧 Основной микширование эффектов
+def mix_effects(audio_path, fx_dir):
+    voice = AudioSegment.from_mp3(audio_path)
+    duration = len(voice)
+    fx_track = AudioSegment.silent(duration=duration)
 
-# Шаг 2. Анализируем текст на события
-doc = nlp(text)
+    result = model.transcribe(audio_path, language="ru", verbose=False)
+    segments = result["segments"]
 
-events = []
-keywords = {
-    "разговор": "crowd_talk.wav",
-    "волна": "sea_waves.wav",
-    "скрежет": "metal_scrape.wav",
-    "чайка": "seagulls.wav",
-    "топот": "footsteps.wav",
-    "ветер": "wind.wav",
-    "скрип": "wooden_creak.wav",
-    "эхо": "metal_echo_step.wav"
-}
+    events = []
 
-for sent in doc.sents:
-    for token in sent:
-        for key, fx in keywords.items():
-            if key in token.lemma_:
-                events.append({"text": sent.text, "sound": fx})
-                break
+    for seg in segments:
+        print(f"🗣️ Сегмент: {seg['text']}")
+        sfx_list = get_sfx_from_ollama(seg['text'])
+        print(f"🎵 Найдено эффектов: {sfx_list}")
+        for sound_file in sfx_list:
+            events.append({
+                "text": seg['text'],
+                "sound": sound_file,
+                "position": int(seg['start'] * 1000)
+            })
 
-# Шаг 3. Расчёт позиций (равномерно распределяем)
-voice = AudioSegment.from_mp3(voice_path)
-duration = len(voice)
-positions = list(range(1000, duration - 1000, max(1000, duration // len(events))))
+    for event in events:
+        fx_path = fx_dir / event["sound"]
+        if fx_path.exists():
+            fx = AudioSegment.from_wav(fx_path).fade_in(300).fade_out(500) - 10
+            fx_track = fx_track.overlay(fx, position=event["position"])
+        else:
+            print(f"⚠️ Не найден звук: {fx_path}")
 
-# Шаг 4. Загружаем звуки и микшируем
-fx_track = AudioSegment.silent(duration=duration)
+    final = voice.overlay(fx_track)
+    final.export("result.wav", format="wav")
+    print("✅ Финальный файл сохранён: result.wav")
+    save_events_to_excel(events)
 
-for event, pos in zip(events, positions):
-    fx_path = fx_dir / event["sound"]
-    fx = AudioSegment.from_wav(fx_path).fade_in(500).fade_out(1000) - 10
-    fx_track = fx_track.overlay(fx, position=pos)
+# 🚀 Точка входа
+def main():
+    audio_path = "audio/voice.mp3"
+    fx_dir = Path("audio/fx")
+    mix_effects(audio_path, fx_dir)
 
-# Шаг 5. Финальный микс
-final = voice.overlay(fx_track)
-final.export(output_path, format="wav")
-print(f"✅ Готово: {output_path}")
-print(f"✅ Готово: {events}")
+if __name__ == "__main__":
+    main()
