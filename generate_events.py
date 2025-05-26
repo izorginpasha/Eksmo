@@ -17,25 +17,28 @@ def get_sfx_from_ollama(text_segment):
 
     {sound_list}
 
-    Проанализируй текст и определи, какие звуковые эффекты подойдут.
+    Проанализируй текст и определи, какие звуковые эффекты ярко выражены и  подойдут.
     Если подходящий звук уже есть в списке — используй его.
     Если в списке нет нужного — придумай новое имя в формате `название.wav`.
 
     Формат ответа строго такой:
 
-    [
+     [
       {{
         "sound": "название.wav",
-        "volume": -5
+        "volume": -5,
+        "pan": 0.0,
+        "background_noise": "название.wav"
       }}
     ]
+
 
     Только JSON. Без пояснений. Текст: \"\"\"{text_segment}\"\"\"
     """
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "llama3", "prompt": prompt, "stream": False}
+            json={"model": "mistral", "prompt": prompt, "stream": False}
         )
         result = response.json().get("response", "").strip()
         print("📤 Ответ от Ollama:", repr(result))
@@ -55,7 +58,12 @@ def main():
 
     events = []
     for seg in segments:
-        print(f"🗣️ Сегмент: {seg['text']}")
+        if seg["no_speech_prob"] < 0.5 and seg["avg_logprob"] > -1.0 and seg["compression_ratio"] < 2.4:
+            print("✅ Сегмент принят:", seg["text"])
+        else:
+            print("⚠️ Сегмент отклонён:", seg["text"])
+            continue
+
         sfx_list = get_sfx_from_ollama(seg['text'])
         print(f"🎵 Найдено эффектов: {sfx_list}")
         for sfx in sfx_list:
@@ -64,7 +72,9 @@ def main():
                 "end": seg["end"],
                 "text": seg["text"],
                 "sound": sfx["sound"],
-                "volume": float(sfx["volume"])
+                "volume": float(sfx.get("volume", 0)),
+                "pan": float(sfx.get("pan", 0.0)),
+                "background_noise": sfx.get("background_noise", "")
             })
 
     save_events_to_excel(events)

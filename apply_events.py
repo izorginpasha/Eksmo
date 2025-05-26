@@ -3,30 +3,14 @@ from pydub.generators import Sine, WhiteNoise
 from pathlib import Path
 import pandas as pd
 import hashlib
+import webbrowser
 
-# def generate_synthetic_sound(fx_path: Path):
-#     """Создаёт уникальный звук на основе имени файла."""
-#     name = fx_path.stem.lower()
-#     hash_val = int(hashlib.md5(name.encode()).hexdigest(), 16)
-#
-#     # Псевдо-уникальные параметры
-#     freq = 200 + (hash_val % 800)        # частота: 200–1000 Гц
-#     dur = 5000 + (hash_val % 1000)        # длительность: 300–1300 мс
-#     is_noise = "noise" in name or "wind" in name or "static" in name
-#
-#     if is_noise:
-#         sound = WhiteNoise().to_audio_segment(duration=dur).fade_in(100).fade_out(100)
-#     else:
-#         sound = Sine(freq).to_audio_segment(duration=dur).fade_in(100).fade_out(100)
-#
-#     try:
-#         sound.export(fx_path, format="wav")
-#         print(f"🔧 Авто-сгенерирован звук: {fx_path.name} ({freq} Гц, {dur} мс)")
-#         return fx_path
-#     except Exception as e:
-#         print(f"❌ Ошибка генерации {fx_path.name}: {e}")
-#         return None
-
+def apply_pan(audio: AudioSegment, pan_value: float) -> AudioSegment:
+    try:
+        return audio.pan(pan_value)
+    except Exception as e:
+        print(f"⚠️ Ошибка применения панорамы ({pan_value}): {e}")
+        return audio
 
 def mix_effects(audio_path, fx_dir, events_path="events.xlsx", output_path="result.wav"):
     try:
@@ -45,7 +29,11 @@ def mix_effects(audio_path, fx_dir, events_path="events.xlsx", output_path="resu
         print("⚠️ Таблица событий пуста.")
         return
 
-
+    required_columns = {"sound", "start_ms", "duration_ms", "volume_db"}
+    for col in required_columns:
+        if col not in df.columns:
+            print(f"❌ Нет обязательного столбца: {col}")
+            return
 
     max_end_ms = (df["start_ms"] + df["duration_ms"]).max()
     total_duration = max(len(voice), max_end_ms)
@@ -58,32 +46,59 @@ def mix_effects(audio_path, fx_dir, events_path="events.xlsx", output_path="resu
     applied = 0
 
     for index, row in df.iterrows():
-        # Очистка имени + расширение
-        filename = str(row["sound"]).strip()
-        if not filename.endswith(".wav"):
-            filename += ".wav"
-        fx_path = fx_dir / filename
+        def load_sound(name_column: str):
+            filename = str(row[name_column]).strip()
+            if not filename.endswith(".wav"):
+                filename += ".wav"
+            fx_path = fx_dir / filename
 
-        if not fx_path.exists():
-            print(f"⚠️ [{index}] Файл не найден: {fx_path}")
+            if fx_path.exists():
+                return AudioSegment.from_wav(fx_path)
+
+            # Если файл не найден — ищем вручную в BBC
+            base_name = filename.replace("_", " ").replace(".wav", "")
+            bbc_url = f"https://sound-effects.bbcrewind.co.uk/search?q={base_name}"
+            print(f"❗ [{index}] Файл '{filename}' не найден. Поиск в BBC: {bbc_url}")
+            try:
+                webbrowser.open(bbc_url)
+            except:
+                pass
+            return None
+
+        # Загрузка основного эффекта
+        fx = load_sound("sound")
+        if fx is None:
             continue
 
-        try:
-            fx = AudioSegment.from_wav(fx_path)
-            fx_duration = int(row["duration_ms"])
-            if len(fx) > fx_duration:
-                fx = fx[:fx_duration]
+        # Обработка параметров
+        fx_duration = int(row["duration_ms"])
+        if len(fx) > fx_duration:
+            fx = fx[:fx_duration]
 
-            fx += float(row["volume_db"])
-            fx = fx.fade_in(300).fade_out(500)
+        # Громкость
+        fx += float(row.get("volume_db", 0))
 
-            start_ms = int(row["start_ms"])
-            fx_track = fx_track.overlay(fx, position=start_ms)
-            print(f"✅ [{index}] {fx_path.name} → {start_ms} мс | {len(fx)} мс | {row['volume_db']} dB")
-            applied += 1
+        # Панорама
+        pan = float(row.get("pan", 0.0))
+        fx = apply_pan(fx, pan)
 
-        except Exception as e:
-            print(f"❌ [{index}] Ошибка обработки {fx_path.name}: {e}")
+        # Фейды
+        fx = fx.fade_in(300).fade_out(500)
+
+        # Вставка
+        start_ms = int(row["start_ms"])
+        fx_track = fx_track.overlay(fx, position=start_ms)
+        print(f"✅ [{index}] {row['sound']} → {start_ms} мс | {fx_duration} мс | vol: {row['volume_db']} | pan: {pan}")
+        applied += 1
+
+        # Фоновый шум
+        bg_name = row.get("background_noise", "")
+        if pd.notna(bg_name) and str(bg_name).strip():
+            bg = load_sound("background_noise")
+            if bg:
+                bg = bg - 10  # делаем фоновый звук тише
+                fx_track = fx_track.overlay(bg, position=start_ms)
+                print(f"🎧 Добавлен фон: {bg_name}")
 
     if applied == 0:
         print("⚠️ Ни один эффект не был применён.")
@@ -101,7 +116,6 @@ def main():
     fx_dir = Path("audio/fx")
     fx_dir.mkdir(parents=True, exist_ok=True)
     mix_effects(audio_path, fx_dir)
-
 
 if __name__ == "__main__":
     main()

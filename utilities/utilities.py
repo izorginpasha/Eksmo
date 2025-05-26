@@ -20,7 +20,7 @@ def save_events_to_excel(events, output_path="events.xlsx"):
     df = df[[
         "text", "sound",
         "start_sec", "duration_sec", "end_sec",
-        "start_ms", "duration_ms", "volume_db"
+        "start_ms", "duration_ms", "volume_db","pan","background_noise"
     ]]
 
     df.to_excel(output_path, index=False)
