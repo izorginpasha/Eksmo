@@ -18,3 +18,5 @@ __pycache__/
 celerybeat-schedule.dat
 audio.zip
 /audio/
+.pytest_cache/
+/models/
