@@ -17,7 +17,7 @@ def get_sfx_from_ollama(text_segment):
     Проанализируй текст и определи, какие звуковые эффекты ярко выражены и  подойдут.
     Придумай имя звука  в формате `название.wav`.
 
-    Формат ответа строго такой:
+    Формат ответа строго такой ключи менять нельзя:
 
      [
       {{
@@ -33,7 +33,7 @@ def get_sfx_from_ollama(text_segment):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "qwen2:1.5b-instruct", "prompt": prompt, "stream": False}
+            json={"model": "mistral:7b-instruct", "prompt": prompt, "stream": False}
         )
         result = response.json().get("response", "").strip()
         print("📤 Ответ от модели:", repr(result))
