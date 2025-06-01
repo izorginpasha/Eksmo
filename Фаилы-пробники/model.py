@@ -4,13 +4,20 @@ from pathlib import Path
 from pprint import pprint
 import os
 
+
+
+#----------НЕ ОБРАЩАТЬ ВНИМАНИЯ ЭТО ФАИЛ ПРОБНИК ЧТОБЫ НЕ ЗАБЫТЬ------
+
+
+
+
 text = """
 — Ты ведь не уйдёшь? — спросила Анна, всматриваясь в вечернее небо. Ветер завывал в соснах, а где-то вдалеке лаяла собака. Пётр подошёл ближе и обнял её. 
 — Никогда.
 """
 
 # === Пути к локальным моделям ===
-models_dir = Path("./models")
+models_dir = Path("../models")
 sentiment_path = models_dir / "rubert-sentiment"
 ner_path = models_dir / "ru-ner-bert"
 embed_path = models_dir / "all-minilm"

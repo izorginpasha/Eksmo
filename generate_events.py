@@ -8,27 +8,22 @@ from utilities.utilities import save_events_to_excel
 # Загружаем модель
 model = whisper.load_model("medium")
 
-def get_sfx_from_ollama(text_segment):
-    fx_dir = Path("audio/fx")
-    available_sounds = {p.name for p in fx_dir.glob("*.wav")}
-    sound_list = "\n".join(f'- {s}' for s in sorted(available_sounds))
-    prompt = f"""
-    Ты — звуковой дизайнер. У тебя есть список доступных звуковых эффектов:
 
-    {sound_list}
+def get_sfx_from_ollama(text_segment):
+
+    prompt = f"""
+    Ты — звуковой дизайнер.
 
     Проанализируй текст и определи, какие звуковые эффекты ярко выражены и  подойдут.
-    Если подходящий звук уже есть в списке — используй его.
-    Если в списке нет нужного — придумай новое имя в формате `название.wav`.
+    Придумай имя звука  в формате `название.wav`.
 
     Формат ответа строго такой:
 
      [
       {{
-        "sound": "название.wav",
+        "background_noise": "название.wav",
         "volume": -5,
         "pan": 0.0,
-        "background_noise": "название.wav"
       }}
     ]
 
@@ -38,17 +33,17 @@ def get_sfx_from_ollama(text_segment):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "mistral", "prompt": prompt, "stream": False}
+            json={"model": "qwen2:1.5b-instruct", "prompt": prompt, "stream": False}
         )
         result = response.json().get("response", "").strip()
-        print("📤 Ответ от Ollama:", repr(result))
+        print("📤 Ответ от модели:", repr(result))
 
         match = re.search(r'\[(?:.|\n)*?\]', result)
         if match:
             return eval(match.group(0))
         return []
     except Exception as e:
-        print("❌ Ошибка Ollama:", e)
+        print("❌ Ошибка модели:", e)
         return []
 
 def main():
@@ -71,10 +66,10 @@ def main():
                 "start": seg["start"],
                 "end": seg["end"],
                 "text": seg["text"],
-                "sound": sfx["sound"],
+                "background_noise": sfx["background_noise"],
                 "volume": float(sfx.get("volume", 0)),
                 "pan": float(sfx.get("pan", 0.0)),
-                "background_noise": sfx.get("background_noise", "")
+
             })
 
     save_events_to_excel(events)
