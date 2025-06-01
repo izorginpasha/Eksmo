@@ -3,7 +3,7 @@ import requests
 from pathlib import Path
 import pandas as pd
 import re
-from utilities.utilities import save_events_to_excel
+from utilities.utilities import save_events_to_excel,save_events_to_json
 
 # Загружаем модель
 model = whisper.load_model("medium")
@@ -15,13 +15,13 @@ def get_sfx_from_ollama(text_segment):
     Ты — звуковой дизайнер.
 
     Проанализируй текст и определи, какие звуковые эффекты ярко выражены и  подойдут.
-    Придумай имя звука  в формате `название.wav`.
+    Придумай описание  звука.
 
     Формат ответа строго такой:
 
      [
       {{
-        "background_noise": "название.wav",
+        "sound": "название",
         "volume": -5,
         "pan": 0.0,
       }}
@@ -33,7 +33,7 @@ def get_sfx_from_ollama(text_segment):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "qwen2:1.5b-instruct", "prompt": prompt, "stream": False}
+            json={"model": "mistral:latest", "prompt": prompt, "stream": False}
         )
         result = response.json().get("response", "").strip()
         print("📤 Ответ от модели:", repr(result))
@@ -66,13 +66,16 @@ def main():
                 "start": seg["start"],
                 "end": seg["end"],
                 "text": seg["text"],
-                "background_noise": sfx["background_noise"],
+                "sound": sfx["sound"],
                 "volume": float(sfx.get("volume", 0)),
                 "pan": float(sfx.get("pan", 0.0)),
 
             })
 
+    # Сохраняем  в ексель
     save_events_to_excel(events)
+    # Сохраняем JSON-файл
+    save_events_to_json(events)
 
 if __name__ == "__main__":
     main()
