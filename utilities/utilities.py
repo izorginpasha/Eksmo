@@ -13,17 +13,26 @@ def save_events_to_excel(events, output_path="output/events.xlsx"):
     df["start_sec"] = df["start"]
     df["end_sec"] = df["end"]
     df["duration_sec"] = df["end"] - df["start"]
-
     df["start_ms"] = (df["start_sec"] * 1000).astype(int)
     df["duration_ms"] = (df["duration_sec"] * 1000).astype(int)
     df["volume_db"] = df["volume"]
 
-    # Упорядочиваем столбцы для читаемости
-    df = df[[
-        "text", "sound", "start_sec", "duration_sec", "end_sec", "volume_db","pan",
+    # Собираем список колонок
+    columns = [
+        "start_sec", "duration_sec", "end_sec", "volume_db", "pan",
         "start_ms", "duration_ms"
-    ]]
+    ]
 
+    if "sound" in df.columns:
+        columns.insert(0, "sound")
+
+    if "text" in df.columns:
+        columns.insert(0, "text")
+
+    df = df[columns]
+
+    # Сохраняем
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     df.to_excel(output_path, index=False)
     print(f"✅ События сохранены в {output_path}")
 

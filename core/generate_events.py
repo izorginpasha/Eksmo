@@ -21,7 +21,7 @@ def get_sfx_from_ollama(text_segment):
 
      [
       {{
-        "sound": "название",
+        "sound": "описание звука",
         "volume": -5,
         "pan": 0.0,
       }}
@@ -47,7 +47,7 @@ def get_sfx_from_ollama(text_segment):
         return []
 
 def main():
-    audio_path = "audio/voice.mp3"
+    audio_path = "../audio/voice.mp3"
     result = model.transcribe(audio_path, language="ru", verbose=False)
     segments = result["segments"]
 

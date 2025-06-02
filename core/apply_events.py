@@ -112,8 +112,8 @@ def mix_effects(audio_path, fx_dir, events_path="events.xlsx", output_path="resu
         print(f"❌ Ошибка сохранения: {e}")
 
 def main():
-    audio_path = "audio/voice.mp3"
-    fx_dir = Path("audio/fx")
+    audio_path = "../audio/voice.mp3"
+    fx_dir = Path("../audio/fx")
     fx_dir.mkdir(parents=True, exist_ok=True)
     mix_effects(audio_path, fx_dir)
 
