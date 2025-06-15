@@ -1,0 +1,93 @@
+[
+  {
+    "sound": "Wind",
+    "start": 25.56,
+    "end": 29.76,
+    "volume": -3.0,
+    "pan": 1.0
+  },
+  {
+    "sound": "Creaking Wood",
+    "start": 25.56,
+    "end": 29.76,
+    "volume": -5.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "footsteps",
+    "start": 29.84,
+    "end": 35.96,
+    "volume": -5.0,
+    "pan": 0.5
+  },
+  {
+    "sound": "Whisper",
+    "start": 41.28,
+    "end": 46.92,
+    "volume": -5.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "thunderclap",
+    "start": 46.92,
+    "end": 52.02,
+    "volume": 10.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "footstep",
+    "start": 46.92,
+    "end": 52.02,
+    "volume": -2.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "metallic_echo",
+    "start": 54.92,
+    "end": 59.08,
+    "volume": -3.0,
+    "pan": 0.5
+  },
+  {
+    "sound": "box_placing",
+    "start": 59.12,
+    "end": 61.12,
+    "volume": -3.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "Rustle",
+    "start": 59.12,
+    "end": 61.12,
+    "volume": -3.0,
+    "pan": 0.5
+  },
+  {
+    "sound": "Silence",
+    "start": 61.12,
+    "end": 64.2,
+    "volume": -8.0,
+    "pan": 0.0
+  },
+  {
+    "sound": "Footsteps_Avoidance",
+    "start": 61.12,
+    "end": 64.2,
+    "volume": -6.0,
+    "pan": 0.2
+  },
+  {
+    "sound": "Silence_Long",
+    "start": 61.12,
+    "end": 64.2,
+    "volume": 0.0,
+    "pan": 0.5
+  },
+  {
+    "sound": "eyes_open",
+    "start": 64.2,
+    "end": 69.48,
+    "volume": 0.5,
+    "pan": 0.5
+  }
+]

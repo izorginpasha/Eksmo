@@ -38,6 +38,7 @@ def compress_sfx_by_scene(
     "end": 25.3,
     "volume": -5,
     "pan": 0.0,
+    "text": "текст при котором производится звук"
   }}
 ]
 
